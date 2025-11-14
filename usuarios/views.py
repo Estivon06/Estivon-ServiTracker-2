@@ -1,8 +1,10 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
 from .forms import RegistroForm, LoginForm
 from django.contrib.auth import get_user_model
+from propiedades.models import Propiedad
+from pqr.models import PQR
 
 Usuario = get_user_model()
 
@@ -66,3 +68,25 @@ def crear_usuario(request):
     else:
         form = RegistroForm()
     return render(request, "usuarios/crear_usuario.html", {"form": form})
+
+# 🔍 Vista para ver detalle de usuario (solo admin/staff)
+@user_passes_test(lambda u: u.is_staff or u.rol == "administrador")
+def detalle_usuario(request, pk):
+    usuario = get_object_or_404(Usuario, pk=pk)
+
+    propiedades = []
+    pqr_creados = []
+    pqr_asignados = []
+
+    if usuario.rol == "ciudadano":
+        propiedades = Propiedad.objects.filter(usuario=usuario)
+        pqr_creados = PQR.objects.filter(ciudadano=usuario)
+    elif usuario.rol == "tecnico":
+        pqr_asignados = PQR.objects.filter(tecnico=usuario)
+
+    return render(request, "usuarios/detalle_usuario.html", {
+        "usuario": usuario,
+        "propiedades": propiedades,
+        "pqr_creados": pqr_creados,
+        "pqr_asignados": pqr_asignados,
+    })

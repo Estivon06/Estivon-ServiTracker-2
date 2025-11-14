@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Detalle de Usuario | ServiTracker{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="text-blue-dark">Detalle de usuario</h2>
+    <p><strong>Documento:</strong> {{ usuario.documento }}</p>
+    <p><strong>Nombre:</strong> {{ usuario.get_full_name }}</p>
+    <p><strong>Email:</strong> {{ usuario.email }}</p>
+    <p><strong>Rol:</strong> {{ usuario.rol }}</p>
+    <p><strong>Activo:</strong> {{ usuario.is_active|yesno:"Sí,No" }}</p>
+
+    {% if usuario.rol == "ciudadano" %}
+        <hr>
+        <h4 class="text-blue-mid">Propiedades</h4>
+        <ul>
+            {% for p in propiedades %}
+                <li>{{ p.direccion }} — {{ p.ciudad }}, {{ p.departamento }}</li>
+            {% empty %}
+                <li>No tiene propiedades registradas.</li>
+            {% endfor %}
+        </ul>
+
+        <h4 class="text-blue-mid">PQR creados</h4>
+        <ul>
+            {% for pqr in pqr_creados %}
+                <li>{{ pqr.descripcion }} ({{ pqr.estado }})</li>
+            {% empty %}
+                <li>No ha creado PQR.</li>
+            {% endfor %}
+        </ul>
+    {% elif usuario.rol == "tecnico" %}
+        <hr>
+        <h4 class="text-blue-mid">Especialidad</h4>
+        <p>{{ usuario.especialidad }}</p>
+
+        <h4 class="text-blue-mid">PQR asignados</h4>
+        <ul>
+            {% for pqr in pqr_asignados %}
+                <li>{{ pqr.descripcion }} ({{ pqr.estado }})</li>
+            {% empty %}
+                <li>No tiene PQR asignados.</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <hr>
+    <a href="{% url 'lista_usuarios' %}" class="btn btn-secondary">⬅ Volver a la lista</a>
+    <a href="{% url 'crear_usuario' %}" class="btn btn-blue-mid">➕ Crear nuevo usuario</a>
+</div>
+{% endblock %}
