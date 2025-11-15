@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .forms import RegistroForm, LoginForm
+from .forms import RegistroForm, LoginForm, UsuarioChangeForm
 from django.contrib.auth import get_user_model
 from propiedades.models import Propiedad
 from pqr.models import PQR
@@ -69,10 +69,18 @@ def crear_usuario(request):
         form = RegistroForm()
     return render(request, "usuarios/crear_usuario.html", {"form": form})
 
-# 🔍 Vista para ver detalle de usuario (solo admin/staff)
+# 🔍 Vista para ver y editar detalle de usuario (solo admin/staff)
 @user_passes_test(lambda u: u.is_staff or u.rol == "administrador")
 def detalle_usuario(request, pk):
     usuario = get_object_or_404(Usuario, pk=pk)
+
+    if request.method == "POST":
+        form = UsuarioChangeForm(request.POST, instance=usuario)
+        if form.is_valid():
+            form.save()
+            return redirect("detalle_usuario", pk=usuario.pk)
+    else:
+        form = UsuarioChangeForm(instance=usuario)
 
     propiedades = []
     pqr_creados = []
@@ -86,6 +94,7 @@ def detalle_usuario(request, pk):
 
     return render(request, "usuarios/detalle_usuario.html", {
         "usuario": usuario,
+        "form": form,
         "propiedades": propiedades,
         "pqr_creados": pqr_creados,
         "pqr_asignados": pqr_asignados,

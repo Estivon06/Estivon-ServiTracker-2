@@ -1,51 +1,76 @@
 {% extends 'base.html' %}
-{% block title %}Detalle de Usuario | ServiTracker{% endblock %}
+{% load widget_tweaks %}
+{% block title %}Editar Usuario | ServiTracker{% endblock %}
 
 {% block content %}
 <div class="container my-5">
-    <h2 class="text-blue-dark">Detalle de usuario</h2>
-    <p><strong>Documento:</strong> {{ usuario.documento }}</p>
-    <p><strong>Nombre:</strong> {{ usuario.get_full_name }}</p>
-    <p><strong>Email:</strong> {{ usuario.email }}</p>
-    <p><strong>Rol:</strong> {{ usuario.rol }}</p>
-    <p><strong>Activo:</strong> {{ usuario.is_active|yesno:"Sí,No" }}</p>
+    <div class="card shadow-sm">
+        <div class="card-header bg-blue-mid text-white">
+            <h4 class="mb-0">Editar usuario</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
 
-    {% if usuario.rol == "ciudadano" %}
-        <hr>
-        <h4 class="text-blue-mid">Propiedades</h4>
-        <ul>
-            {% for p in propiedades %}
-                <li>{{ p.direccion }} — {{ p.ciudad }}, {{ p.departamento }}</li>
-            {% empty %}
-                <li>No tiene propiedades registradas.</li>
-            {% endfor %}
-        </ul>
+                <!-- Documento -->
+                <div class="col-md-6">
+                    {{ form.documento.label_tag }}
+                    {{ form.documento|add_class:"form-control" }}
+                </div>
 
-        <h4 class="text-blue-mid">PQR creados</h4>
-        <ul>
-            {% for pqr in pqr_creados %}
-                <li>{{ pqr.descripcion }} ({{ pqr.estado }})</li>
-            {% empty %}
-                <li>No ha creado PQR.</li>
-            {% endfor %}
-        </ul>
-    {% elif usuario.rol == "tecnico" %}
-        <hr>
-        <h4 class="text-blue-mid">Especialidad</h4>
-        <p>{{ usuario.especialidad }}</p>
+                <!-- Nombre -->
+                <div class="col-md-6">
+                    {{ form.nombres.label_tag }}
+                    {{ form.nombres|add_class:"form-control" }}
+                </div>
 
-        <h4 class="text-blue-mid">PQR asignados</h4>
-        <ul>
-            {% for pqr in pqr_asignados %}
-                <li>{{ pqr.descripcion }} ({{ pqr.estado }})</li>
-            {% empty %}
-                <li>No tiene PQR asignados.</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
+                <!-- Apellido -->
+                <div class="col-md-6">
+                    {{ form.apellidos.label_tag }}
+                    {{ form.apellidos|add_class:"form-control" }}
+                </div>
 
-    <hr>
-    <a href="{% url 'lista_usuarios' %}" class="btn btn-secondary">⬅ Volver a la lista</a>
-    <a href="{% url 'crear_usuario' %}" class="btn btn-blue-mid">➕ Crear nuevo usuario</a>
+                <!-- Email -->
+                <div class="col-md-6">
+                    {{ form.email.label_tag }}
+                    {{ form.email|add_class:"form-control" }}
+                </div>
+
+                <!-- Rol -->
+                <div class="col-md-6">
+                    {{ form.rol.label_tag }}
+                    {{ form.rol|add_class:"form-select" }}
+                </div>
+
+                <!-- Especialidad -->
+                <div class="col-md-6">
+                    {{ form.especialidad.label_tag }}
+                    {{ form.especialidad|add_class:"form-control" }}
+                </div>
+
+                <!-- Estado -->
+                <div class="col-md-4 form-check">
+                    {{ form.is_active }}
+                    {{ form.is_active.label_tag }}
+                </div>
+                <div class="col-md-4 form-check">
+                    {{ form.is_staff }}
+                    {{ form.is_staff.label_tag }}
+                </div>
+                <div class="col-md-4 form-check">
+                    {{ form.is_superuser }}
+                    {{ form.is_superuser.label_tag }}
+                </div>
+
+                <div class="col-12">
+                    <button type="submit" class="btn btn-blue-mid w-100 mt-3">💾 Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="{% url 'lista_usuarios' %}" class="btn btn-secondary">⬅ Volver a la lista</a>
+    </div>
 </div>
 {% endblock %}
