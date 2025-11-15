@@ -1,7 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .forms import RegistroForm, LoginForm, UsuarioChangeForm, CustomPasswordChangeForm
+from .forms import (
+    RegistroForm,
+    LoginForm,
+    UsuarioChangeForm,
+    CustomPasswordChangeForm
+)
 from django.contrib.auth import get_user_model
 from propiedades.models import Propiedad
 from pqr.models import PQR
@@ -46,10 +51,25 @@ def logout_view(request):
     logout(request)
     return redirect('index')
 
-# 👤 Vista del perfil del usuario
+# 👤 Vista del perfil del usuario (solo lectura + cambiar contraseña)
 @login_required
 def perfil(request):
     return render(request, 'usuarios/perfil.html', {'usuario': request.user})
+
+# 📊 Dashboard del ciudadano
+@login_required
+def dashboard_ciudadano(request):
+    if request.user.rol != "ciudadano":
+        return redirect("index")
+
+    propiedades = Propiedad.objects.filter(usuario=request.user)
+    pqr = PQR.objects.filter(ciudadano=request.user)
+
+    return render(request, "usuarios/dashboard_ciudadano.html", {
+        "usuario": request.user,
+        "propiedades": propiedades,
+        "pqr": pqr,
+    })
 
 # 📋 Vista para listar usuarios (solo admin/staff)
 @user_passes_test(lambda u: u.is_staff or u.rol == "administrador")
@@ -77,6 +97,9 @@ def detalle_usuario(request, pk):
     if request.method == "POST":
         form = UsuarioChangeForm(request.POST, instance=usuario)
         if form.is_valid():
+            nueva_contrasena = request.POST.get("nueva_contrasena")
+            if nueva_contrasena:
+                usuario.set_password(nueva_contrasena)
             form.save()
             return redirect("detalle_usuario", pk=usuario.pk)
     else:
@@ -107,9 +130,26 @@ def cambiar_contrasena(request):
         form = CustomPasswordChangeForm(user=request.user, data=request.POST)
         if form.is_valid():
             usuario = form.save()
-            # Mantener sesión activa después de cambiar contraseña
             update_session_auth_hash(request, usuario)
             return redirect("perfil")
     else:
         form = CustomPasswordChangeForm(user=request.user)
     return render(request, "usuarios/cambiar_contrasena.html", {"form": form})
+
+# 🔑 Vista para resetear contraseña de otro usuario (solo admin/staff)
+@user_passes_test(lambda u: u.is_staff or u.rol == "administrador")
+def resetear_contrasena_usuario(request, pk):
+    usuario = get_object_or_404(Usuario, pk=pk)
+
+    if request.method == "POST":
+        nueva = request.POST.get("nueva_contrasena")
+        confirmar = request.POST.get("confirmar_contrasena")
+        if nueva and nueva == confirmar:
+            usuario.set_password(nueva)
+            usuario.save()
+            return redirect("detalle_usuario", pk=usuario.pk)
+        else:
+            error = "Las contraseñas no coinciden."
+            return render(request, "usuarios/resetear_contrasena.html", {"usuario": usuario, "error": error})
+
+    return render(request, "usuarios/resetear_contrasena.html", {"usuario": usuario})

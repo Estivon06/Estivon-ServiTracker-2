@@ -93,13 +93,31 @@ class LoginForm(forms.Form):
 
 # 🛠️ Formulario para editar usuarios en el admin
 class UsuarioChangeForm(forms.ModelForm):
-    password = ReadOnlyPasswordHashField(label="Hash de contraseña")
+    password = ReadOnlyPasswordHashField(label="Hash de contraseña", help_text="El hash actual de la contraseña.")
+    nueva_contrasena = forms.CharField(
+        label="Nueva contraseña",
+        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        required=False,
+        help_text="Si deseas cambiar la contraseña de este usuario, ingrésala aquí."
+    )
 
     class Meta:
         model = Usuario
-        fields = ("documento", "nombres", "apellidos", "email", "rol", "especialidad", "password", "is_active", "is_staff", "is_superuser")
+        fields = (
+            "documento",
+            "nombres",
+            "apellidos",
+            "email",
+            "rol",
+            "especialidad",
+            "password",
+            "is_active",
+            "is_staff",
+            "is_superuser",
+        )
 
     def clean_password(self):
+        # Mantener el hash original si no se cambia
         return self.initial.get("password")
 
 

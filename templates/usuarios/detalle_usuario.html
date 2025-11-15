@@ -62,6 +62,15 @@
                     {{ form.is_superuser.label_tag }}
                 </div>
 
+                <!-- Nueva contraseña (solo admin, inline) -->
+                <div class="col-md-6">
+                    {{ form.nueva_contrasena.label_tag }}
+                    {{ form.nueva_contrasena|add_class:"form-control" }}
+                    <small class="form-text text-muted">
+                        Si deseas cambiar la contraseña de este usuario, ingrésala aquí.
+                    </small>
+                </div>
+
                 <div class="col-12">
                     <button type="submit" class="btn btn-blue-mid w-100 mt-3">💾 Guardar cambios</button>
                 </div>
@@ -69,8 +78,12 @@
         </div>
     </div>
 
-    <div class="mt-3">
+    <div class="mt-3 d-flex gap-2">
         <a href="{% url 'lista_usuarios' %}" class="btn btn-secondary">⬅ Volver a la lista</a>
+        <!-- Botón alternativo para ir a la vista de resetear contraseña -->
+        <a href="{% url 'resetear_contrasena_usuario' usuario.pk %}" class="btn btn-orange-dark">
+            🔑 Resetear contraseña
+        </a>
     </div>
 </div>
 {% endblock %}
