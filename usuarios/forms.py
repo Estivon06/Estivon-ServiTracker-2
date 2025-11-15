@@ -1,7 +1,6 @@
 from django import forms
-from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import ReadOnlyPasswordHashField
-from django.contrib.auth import authenticate
+from django.contrib.auth import get_user_model, authenticate
+from django.contrib.auth.forms import ReadOnlyPasswordHashField, PasswordChangeForm
 from .models import Especialidad
 from propiedades.models import Propiedad
 
@@ -44,7 +43,6 @@ class RegistroForm(forms.ModelForm):
         user.set_password(self.cleaned_data["password1"])
 
         if commit:
-            # ✅ Guardar primero el usuario
             user.save()
 
             # Si es técnico → asignar especialidad
@@ -127,3 +125,19 @@ class UsuarioAdminCreationForm(forms.ModelForm):
         if commit:
             user.save()
         return user
+
+
+# 🔑 Formulario para cambiar contraseña (usuario autenticado)
+class CustomPasswordChangeForm(PasswordChangeForm):
+    old_password = forms.CharField(
+        label="Contraseña actual",
+        widget=forms.PasswordInput(attrs={"class": "form-control"})
+    )
+    new_password1 = forms.CharField(
+        label="Nueva contraseña",
+        widget=forms.PasswordInput(attrs={"class": "form-control"})
+    )
+    new_password2 = forms.CharField(
+        label="Confirmar nueva contraseña",
+        widget=forms.PasswordInput(attrs={"class": "form-control"})
+    )

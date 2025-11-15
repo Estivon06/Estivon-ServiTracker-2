@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required, user_passes_test
-from .forms import RegistroForm, LoginForm, UsuarioChangeForm
+from .forms import RegistroForm, LoginForm, UsuarioChangeForm, CustomPasswordChangeForm
 from django.contrib.auth import get_user_model
 from propiedades.models import Propiedad
 from pqr.models import PQR
@@ -99,3 +99,17 @@ def detalle_usuario(request, pk):
         "pqr_creados": pqr_creados,
         "pqr_asignados": pqr_asignados,
     })
+
+# 🔑 Vista para cambiar contraseña (usuario autenticado)
+@login_required
+def cambiar_contrasena(request):
+    if request.method == "POST":
+        form = CustomPasswordChangeForm(user=request.user, data=request.POST)
+        if form.is_valid():
+            usuario = form.save()
+            # Mantener sesión activa después de cambiar contraseña
+            update_session_auth_hash(request, usuario)
+            return redirect("perfil")
+    else:
+        form = CustomPasswordChangeForm(user=request.user)
+    return render(request, "usuarios/cambiar_contrasena.html", {"form": form})

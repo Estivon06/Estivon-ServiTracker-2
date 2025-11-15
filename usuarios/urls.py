@@ -12,4 +12,6 @@ urlpatterns = [
     path("lista/", views.lista_usuarios, name="lista_usuarios"),
     path("nuevo/", views.crear_usuario, name="crear_usuario"),
     path("detalle/<int:pk>/", views.detalle_usuario, name="detalle_usuario"),  # ✅ aquí
+    path("cambiar-contrasena/", views.cambiar_contrasena, name="cambiar_contrasena"),
+
 ]
