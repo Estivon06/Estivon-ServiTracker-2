@@ -31,8 +31,12 @@
 
                     <!-- Opciones dinámicas según autenticación -->
                     {% if user.is_authenticated %}
-                        {% if user.rol == "administrador" or user.rol == "agente" %}
-                            <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
+                        {% if user.rol == "administrador" %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_admin' %}">Dashboard</a></li>
+                        {% endif %}
+
+                        {% if user.rol == "agente" %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'dashboard_agente' %}">Dashboard</a></li>
                         {% endif %}
 
                         {% if user.rol == "ciudadano" %}
