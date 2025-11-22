@@ -15,17 +15,23 @@ Usuario = get_user_model()
 
 # 🌐 Vista principal del sitio (landing page)
 def index(request):
+    contexto = {}
     if request.user.is_authenticated:
+        contexto["usuario"] = request.user
+
         if request.user.rol == "ciudadano":
-            return redirect("dashboard_ciudadano")
-        elif request.user.rol == "agente":
-            return redirect("dashboard_agente")
+            contexto["pqr_list"] = PQR.objects.filter(ciudadano=request.user).order_by("-id")[:5]
+
         elif request.user.rol == "tecnico":
-            return redirect("dashboard_tecnico")
-        elif request.user.is_staff or request.user.rol == "administrador":
-            return redirect("dashboard_admin")
-        return render(request, 'index.html', {"usuario": request.user})
-    return render(request, 'index.html')
+            contexto["asignaciones"] = PQR.objects.filter(tecnico_asignado=request.user).order_by("-id")[:5]
+
+        elif request.user.rol == "agente" or request.user.rol == "administrador" or request.user.is_staff:
+            contexto["pendientes"] = PQR.objects.filter(estado__nombre="Pendiente").count()
+            contexto["en_curso"] = PQR.objects.filter(estado__nombre="En curso").count()
+            contexto["resueltos"] = PQR.objects.filter(estado__nombre="Resuelto").count()
+            contexto["ultimos_pqr"] = PQR.objects.select_related("ciudadano", "propiedad", "estado").order_by("-id")[:5]
+
+    return render(request, 'index.html', contexto)
 
 # 📝 Vista para registro público (usuario anónimo crea su propia cuenta)
 def registro(request):
@@ -67,7 +73,13 @@ def logout_view(request):
 # 👤 Vista del perfil del usuario
 @login_required
 def perfil(request):
-    return render(request, 'usuarios/perfil.html', {'usuario': request.user})
+    usuario = request.user
+    pqr_list = PQR.objects.filter(ciudadano=usuario) if usuario.rol == "ciudadano" else []
+    return render(request, "usuarios/perfil.html", {
+        "usuario": usuario,
+        "pqr_list": pqr_list,
+    })
+
 
 # 📊 Dashboard del ciudadano
 @login_required
@@ -111,7 +123,6 @@ def editar_usuario(request, pk):
             nueva_contrasena = form.cleaned_data.get("nueva_contrasena")
             if nueva_contrasena:
                 usuario.set_password(nueva_contrasena)
-            # 🔐 Limpieza de especialidad si el rol ya no es técnico
             if usuario.rol != "tecnico":
                 usuario.especialidad = None
             usuario.save()
@@ -127,7 +138,7 @@ def editar_usuario(request, pk):
         propiedades = Propiedad.objects.filter(usuario=usuario)
         pqr_creados = PQR.objects.filter(ciudadano=usuario)
     elif usuario.rol == "tecnico":
-        pqr_asignados = PQR.objects.filter(tecnico=usuario)
+        pqr_asignados = PQR.objects.filter(tecnico_asignado=usuario)
 
     return render(request, "usuarios/editar_usuario.html", {
         "usuario": usuario,
