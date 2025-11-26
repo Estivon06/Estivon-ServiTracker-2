@@ -1,17 +1,16 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render
 from django.contrib.auth.decorators import user_passes_test
-from pqr.models import PQR, TipoFalla, Propiedad
+from pqr.models import PQR, TipoFalla
+from propiedades.models import Propiedad
 
 # 📊 Dashboard del administrador
 @user_passes_test(lambda u: u.is_staff or u.rol == "administrador")
 def dashboard_admin(request):
-    ciudad = request.GET.get("ciudad")
-    tipo_falla_id = request.GET.get("tipo_falla")
-
     pendientes = PQR.objects.filter(estado__nombre="Pendiente").count()
     en_curso = PQR.objects.filter(estado__nombre="En curso").count()
     resueltos = PQR.objects.filter(estado__nombre="Resuelto").count()
 
+    # Estadísticas por ciudad
     estadisticas_ciudad = {}
     for pqr in PQR.objects.select_related('propiedad').all():
         if pqr.propiedad:
@@ -23,27 +22,21 @@ def dashboard_admin(request):
             elif pqr.estado.nombre == "Resuelto":
                 estadisticas_ciudad[ciudad_key]["resueltos"] += 1
 
-    pqr_pendientes = PQR.objects.filter(estado__nombre="Pendiente")
-    if ciudad:
-        pqr_pendientes = pqr_pendientes.filter(propiedad__ciudad__icontains=ciudad)
-    if tipo_falla_id:
-        pqr_pendientes = pqr_pendientes.filter(tipo_falla__id=tipo_falla_id)
+    # Top 5 urgentes/muy urgentes, si no hay mostrar pendientes
+    pqr_urgentes = PQR.objects.filter(estado__nombre__in=["Urgente", "Muy urgente"]).order_by("id")[:5]
+    if not pqr_urgentes.exists():
+        pqr_urgentes = PQR.objects.filter(estado__nombre="Pendiente").order_by("id")[:5]
 
-    # 👇 nuevas: todas las PQR que NO están pendientes
-    pqr_no_pendientes = PQR.objects.exclude(estado__nombre="Pendiente")
-
-    tipos_falla = TipoFalla.objects.all()
+    # Últimas 5 resueltas
+    pqr_resueltas = PQR.objects.filter(estado__nombre="Resuelto").order_by("-id")[:5]
 
     contexto = {
         "pendientes": pendientes,
         "en_curso": en_curso,
         "resueltos": resueltos,
         "estadisticas_ciudad": estadisticas_ciudad,
-        "pqr_pendientes": pqr_pendientes,
-        "pqr_no_pendientes": pqr_no_pendientes,
-        "tipos_falla": tipos_falla,
-        "ciudad": ciudad,
-        "tipo_falla_id": tipo_falla_id,
+        "pqr_urgentes": pqr_urgentes,
+        "pqr_resueltas": pqr_resueltas,
     }
     return render(request, 'reportes/dashboard_admin.html', contexto)
 
@@ -51,20 +44,45 @@ def dashboard_admin(request):
 # 📊 Dashboard del agente
 @user_passes_test(lambda u: u.rol == "agente")
 def dashboard_agente(request):
-    # El agente gestiona PQR operativamente: ver pendientes y en curso
+    # Pendientes: globales
     pqr_pendientes = PQR.objects.filter(estado__nombre="Pendiente")
-    pqr_en_curso = PQR.objects.filter(estado__nombre="En curso")
 
-    # Si quieres permitir filtro por ciudad desde la UI:
+    # En curso y resueltos: solo los asignados por este agente
+    pqr_en_curso = PQR.objects.filter(estado__nombre="En curso", agente_revisor=request.user)
+    pqr_resueltas = PQR.objects.filter(estado__nombre="Resuelto", agente_revisor=request.user).order_by("-id")[:5]
+
+    # Contadores
+    pendientes = pqr_pendientes.count()
+    en_curso = pqr_en_curso.count()
+    resueltos = pqr_resueltas.count()
+
+    # Estadísticas por ciudad (solo pendientes globales y resueltos del agente)
+    estadisticas_ciudad = {}
+    for pqr in list(pqr_pendientes) + list(pqr_resueltas):
+        if pqr.propiedad:
+            ciudad_key = pqr.propiedad.ciudad
+            if ciudad_key not in estadisticas_ciudad:
+                estadisticas_ciudad[ciudad_key] = {"pendientes": 0, "resueltos": 0}
+            if pqr.estado.nombre == "Pendiente":
+                estadisticas_ciudad[ciudad_key]["pendientes"] += 1
+            elif pqr.estado.nombre == "Resuelto":
+                estadisticas_ciudad[ciudad_key]["resueltos"] += 1
+
     ciudad = request.GET.get("ciudad")
     if ciudad:
         pqr_pendientes = pqr_pendientes.filter(propiedad__ciudad__icontains=ciudad)
         pqr_en_curso = pqr_en_curso.filter(propiedad__ciudad__icontains=ciudad)
+        pqr_resueltas = pqr_resueltas.filter(propiedad__ciudad__icontains=ciudad)
 
     contexto = {
         "usuario": request.user,
+        "pendientes": pendientes,
+        "en_curso": en_curso,
+        "resueltos": resueltos,
+        "estadisticas_ciudad": estadisticas_ciudad,
         "pqr_pendientes": pqr_pendientes,
         "pqr_en_curso": pqr_en_curso,
+        "pqr_resueltas": pqr_resueltas,
         "ciudad": ciudad or "",
     }
     return render(request, 'reportes/dashboard_agente.html', contexto)
@@ -73,11 +91,31 @@ def dashboard_agente(request):
 # 📊 Dashboard del técnico
 @user_passes_test(lambda u: u.rol == "tecnico")
 def dashboard_tecnico(request):
+    # Todas las PQR asignadas a este técnico
     pqr_asignadas = PQR.objects.filter(tecnico_asignado=request.user)
-    return render(request, "reportes/dashboard_tecnico.html", {
+
+    # Primeras 5 asignadas (ordenadas por fecha de creación ascendente)
+    primeras_asignadas = pqr_asignadas.order_by("fecha_creacion")[:5]
+
+    # Últimas 5 resueltas por este técnico
+    ultimas_resueltas = pqr_asignadas.filter(estado__nombre="Resuelto").order_by("-fecha_actualizacion")[:5]
+
+    # Contadores
+    asignadas = pqr_asignadas.count()
+    en_curso = pqr_asignadas.filter(estado__nombre="En curso").count()
+    resueltas = pqr_asignadas.filter(estado__nombre="Resuelto").count()
+
+    contexto = {
         "usuario": request.user,
         "pqr_asignadas": pqr_asignadas,
-    })
+        "primeras_asignadas": primeras_asignadas,
+        "ultimas_resueltas": ultimas_resueltas,
+        "asignadas": asignadas,
+        "en_curso": en_curso,
+        "resueltas": resueltas,
+    }
+    return render(request, "reportes/dashboard_tecnico.html", contexto)
+
 
 
 # 📋 Todas las PQR (con filtros)

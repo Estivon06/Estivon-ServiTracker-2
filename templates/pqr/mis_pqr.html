@@ -1,15 +1,14 @@
 {% extends 'base.html' %}
-{% block title %}Todos los PQR{% endblock %}
+{% block title %}Mis PQR{% endblock %}
 {% block content %}
 <div class="container my-5">
-    <h2 class="text-blue-dark">Todos los PQR</h2>
+    <h2 class="text-blue-dark">Mis PQR</h2>
 
     <table class="table table-striped">
         <thead>
             <tr>
                 <th>ID</th>
                 <th>Propiedad</th>
-                <th>Ciudadano</th>
                 <th>Tipo de falla</th>
                 <th>Descripción</th>
                 <th>Estado</th>
@@ -21,18 +20,26 @@
             <tr>
                 <td>{{ pqr.id }}</td>
                 <td>{{ pqr.propiedad }}</td>
-                <td>{{ pqr.ciudadano }}</td>
                 <td>{{ pqr.tipo_falla }}</td>
                 <td>{{ pqr.descripcion }}</td>
-                <td>{{ pqr.estado.nombre }}</td>
+                <td>
+                    <span class="badge 
+                        {% if pqr.estado.nombre == 'Pendiente' %} bg-warning
+                        {% elif pqr.estado.nombre == 'En curso' %} bg-info
+                        {% elif pqr.estado.nombre == 'Resuelto' %} bg-success
+                        {% else %} bg-secondary
+                        {% endif %}">
+                        {{ pqr.estado.nombre }}
+                    </span>
+                </td>
                 <td>
                     {% if pqr.estado.nombre == "Pendiente" %}
-                        <a href="{% url 'asignar_tecnico' pqr.pk %}" class="btn btn-sm btn-blue-mid">Asignar técnico</a>
+                        <a href="{% url 'editar_pqr' pqr.pk %}" class="btn btn-sm btn-orange-dark">Editar</a>
                     {% endif %}
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="7">No hay PQR registrados.</td></tr>
+            <tr><td colspan="6">No tienes PQR registrados.</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -60,10 +67,13 @@
         </ul>
     </nav>
 
-    <!-- Botón volver -->
-    <div class="mt-4">
-        <a href="{% url 'dashboard_admin' %}" class="btn btn-secondary w-100 py-3">
+    <!-- Botones de acción -->
+    <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'dashboard_ciudadano' %}" class="btn btn-secondary">
             ⬅️ Volver al Dashboard
+        </a>
+        <a href="{% url 'nuevo_pqr' %}" class="btn btn-blue-mid">
+            ➕ Crear PQR
         </a>
     </div>
 </div>
