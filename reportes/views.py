@@ -95,8 +95,9 @@ def dashboard_tecnico(request):
     # Todas las PQR asignadas a este técnico
     pqr_asignadas = PQR.objects.filter(tecnico_asignado=request.user)
 
-    # Primeras 5 asignadas
-    primeras_asignadas = pqr_asignadas.order_by("fecha_creacion")[:5]
+    # Primeras 5 asignadas (solo si no están resueltas)
+    primeras_asignadas = pqr_asignadas.exclude(estado__nombre="Resuelto").order_by("fecha_creacion")[:5]
+
 
     # Últimas 5 resueltas por este técnico
     ultimas_resueltas = pqr_asignadas.filter(estado__nombre="Resuelto").order_by("-fecha_actualizacion")[:5]

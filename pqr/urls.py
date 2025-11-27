@@ -35,4 +35,7 @@ urlpatterns = [
 
     # ⚡ PQR rápido (anónimo)
     path('rapido/', views.pqr_rapido, name='pqr_rapido'),
+
+    # ✅ Técnico: confirmar revisión y marcar como resuelto
+    path('<int:pk>/confirmar-revision/', views.confirmar_revision, name='confirmar_revision'),
 ]

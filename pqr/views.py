@@ -8,7 +8,7 @@ from datetime import timedelta
 from django.core.exceptions import ValidationError
 
 from .models import PQR, EstadoPQR, Propiedad, TipoFalla, UsuarioInsistente
-from .forms import PQRForm, AsignarTecnicoForm, AsignarAgenteForm, PQRAnonimoForm
+from .forms import PQRForm, AsignarTecnicoForm, AsignarAgenteForm, PQRAnonimoForm, ConfirmarRevisionForm
 
 Usuario = get_user_model()
 
@@ -190,18 +190,11 @@ def detalle_pqr(request, pk):
 @user_passes_test(lambda u: u.rol == "agente")
 def lista_insistentes(request):
     limite = timezone.now() - timedelta(days=30)
-    insistentes = UsuarioInsistente.objects.filter(fecha_intento__gte=limite).select_related("usuario", "propiedad")
-    return render(request, "pqr/lista_insistentes.html", {"insistentes": insistentes})
-
-
-# 📊 Lista de usuarios insistentes (solo agentes)
-@user_passes_test(lambda u: u.rol == "agente")
-def lista_insistentes(request):
-    limite = timezone.now() - timedelta(days=30)
     insistentes = UsuarioInsistente.objects.filter(
         fecha_intento__gte=limite
     ).select_related("usuario", "propiedad")
     return render(request, "pqr/lista_insistentes.html", {"insistentes": insistentes})
+
 
 
 # ⚡ PQR rápido (anónimo)
@@ -229,3 +222,22 @@ def pqr_rapido(request):
     return render(request, 'pqr/pqr_rapido.html', {'form': form})
 
 
+
+@login_required
+def confirmar_revision(request, pk):
+    if request.user.rol != "tecnico":
+        return redirect("index")
+    pqr = get_object_or_404(PQR, pk=pk, tecnico_asignado=request.user)
+
+    if request.method == "POST":
+        form = ConfirmarRevisionForm(request.POST, instance=pqr)
+        if form.is_valid():
+            pqr = form.save(commit=False)
+            estado_resuelto = EstadoPQR.objects.get(nombre="Resuelto")
+            pqr.estado = estado_resuelto
+            pqr.save()
+            return redirect("dashboard_tecnico")
+    else:
+        form = ConfirmarRevisionForm(instance=pqr)
+
+    return render(request, "pqr/confirmar_revision.html", {"form": form, "pqr": pqr})

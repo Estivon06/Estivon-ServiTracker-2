@@ -56,3 +56,17 @@ class AsignarAgenteForm(forms.Form):
         label="Seleccionar agente",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
+
+
+# Formulario para técnicos: confirmar revisión y escribir observación
+class ConfirmarRevisionForm(forms.ModelForm):
+    class Meta:
+        model = PQR
+        fields = ['observacion_tecnico']
+        widgets = {
+            'observacion_tecnico': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Describe la revisión realizada...'
+            }),
+        }

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block title %}Confirmar revisión PQR{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h2 class="text-blue-dark">Confirmar revisión del PQR {{ pqr.id }}</h2>
+
+    <div class="mb-3">
+        <p><strong>Descripción:</strong> {{ pqr.descripcion }}</p>
+        {% if pqr.propiedad %}
+            <p><strong>Propiedad:</strong> {{ pqr.propiedad }}</p>
+        {% else %}
+            <p><strong>Dirección:</strong> {{ pqr.direccion }} - {{ pqr.ciudad }} ({{ pqr.departamento }})</p>
+        {% endif %}
+    </div>
+
+    <form method="post" class="card shadow-sm p-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <button type="submit" class="btn btn-success w-100">
+            ✅ Marcar como Resuelto
+        </button>
+        <a href="{% url 'dashboard_tecnico' %}" class="btn btn-secondary w-100 mt-2">
+            ⬅️ Volver al Dashboard
+        </a>
+    </form>
+</div>
+{% endblock %}

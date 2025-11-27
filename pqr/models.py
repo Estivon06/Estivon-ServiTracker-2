@@ -75,6 +75,9 @@ class PQR(models.Model):
         related_name="pqrs_agente"
     )
 
+    # 📝 Observación del técnico al confirmar revisión
+    observacion_tecnico = models.TextField(blank=True, null=True)
+
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
