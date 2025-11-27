@@ -16,7 +16,7 @@ Usuario = get_user_model()
 @login_required
 def mi_lista_pqr(request):
     pqr_queryset = PQR.objects.filter(ciudadano=request.user).order_by("-id")
-    paginator = Paginator(pqr_queryset, 10)  # 10 PQR por página
+    paginator = Paginator(pqr_queryset, 10)
     page_number = request.GET.get("page")
     pqr_list = paginator.get_page(page_number)
     return render(request, 'pqr/mis_pqr.html', {'pqr_list': pqr_list})
@@ -29,7 +29,7 @@ def lista_pqr_admin(request):
     for pqr in pqr_queryset:
         pqr.actualizar_estado_urgencia()
 
-    paginator = Paginator(pqr_queryset, 20)  # 20 PQR por página
+    paginator = Paginator(pqr_queryset, 20)
     page_number = request.GET.get("page")
     pqr_list = paginator.get_page(page_number)
 
@@ -49,11 +49,10 @@ def nuevo_pqr(request):
             pqr.estado = estado_pendiente
 
             try:
-                pqr.full_clean()  # ejecuta validaciones del modelo (incluye clean)
+                pqr.full_clean()
                 pqr.save()
                 return redirect('mi_lista_pqr')
             except ValidationError as e:
-                # Mostrar mensaje de error al ciudadano
                 return render(request, 'pqr/nuevo_pqr.html', {
                     'form': form,
                     'error_message': e.messages[0]
@@ -80,13 +79,13 @@ def editar_pqr(request, pk):
     return render(request, 'pqr/editar.html', {'form': form})
 
 
-# 🔧 Vista para técnicos: Mis asignaciones (con paginación)
+# 🔧 Vista para técnicos: Mis asignaciones
 @login_required
 def mis_asignaciones(request):
     if request.user.rol != "tecnico":
         return redirect('index')
     asignaciones_queryset = PQR.objects.filter(tecnico_asignado=request.user).order_by("-id")
-    paginator = Paginator(asignaciones_queryset, 10)  # 10 asignaciones por página
+    paginator = Paginator(asignaciones_queryset, 10)
     page_number = request.GET.get("page")
     asignaciones = paginator.get_page(page_number)
     return render(request, 'pqr/mis_asignaciones.html', {'asignaciones': asignaciones})
@@ -104,6 +103,9 @@ def asignar_tecnico(request, pk):
             pqr = form.save(commit=False)
             estado_en_curso = EstadoPQR.objects.get(nombre="En curso")
             pqr.estado = estado_en_curso
+            # 🔑 registrar el agente que hizo la asignación
+            if request.user.rol == "agente":
+                pqr.agente_revisor = request.user
             pqr.save()
             return redirect('dashboard_admin' if request.user.rol == "administrador" else 'dashboard_agente')
     else:
@@ -172,16 +174,12 @@ def cerrar_pqr(request, pk):
 @user_passes_test(lambda u: u.rol in ["agente", "administrador", "tecnico"])
 def detalle_pqr(request, pk):
     pqr = get_object_or_404(PQR, pk=pk)
-    # Actualizar urgencia si corresponde
     if pqr.estado.nombre in ["Pendiente", "Urgente", "Muy urgente"]:
         try:
             pqr.actualizar_estado_urgencia()
         except Exception:
             pass
-
-    # Solo agentes y administradores pueden ver lista de estados para cambiar
     estados = EstadoPQR.objects.all() if request.user.rol in ["agente", "administrador"] else []
-
     return render(request, 'pqr/detalle_pqr.html', {
         'pqr': pqr,
         'estados': estados,
@@ -196,17 +194,36 @@ def lista_insistentes(request):
     return render(request, "pqr/lista_insistentes.html", {"insistentes": insistentes})
 
 
+# 📊 Lista de usuarios insistentes (solo agentes)
+@user_passes_test(lambda u: u.rol == "agente")
+def lista_insistentes(request):
+    limite = timezone.now() - timedelta(days=30)
+    insistentes = UsuarioInsistente.objects.filter(
+        fecha_intento__gte=limite
+    ).select_related("usuario", "propiedad")
+    return render(request, "pqr/lista_insistentes.html", {"insistentes": insistentes})
 
+
+# ⚡ PQR rápido (anónimo)
 def pqr_rapido(request):
     if request.method == 'POST':
         form = PQRAnonimoForm(request.POST)
         if form.is_valid():
             pqr = form.save(commit=False)
-            pqr.ciudadano = None  # usuario anónimo
+            # usuario anónimo
+            pqr.ciudadano = None
+            # estado inicial siempre Pendiente
             estado_pendiente = EstadoPQR.objects.get(nombre="Pendiente")
             pqr.estado = estado_pendiente
-            pqr.save()
-            return redirect('index')
+            try:
+                pqr.full_clean()  # validaciones del modelo (incluye teléfono único)
+                pqr.save()
+                return redirect('index')
+            except ValidationError as e:
+                return render(request, 'pqr/pqr_rapido.html', {
+                    'form': form,
+                    'error_message': e.messages[0]
+                })
     else:
         form = PQRAnonimoForm()
     return render(request, 'pqr/pqr_rapido.html', {'form': form})

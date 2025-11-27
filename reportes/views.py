@@ -56,7 +56,7 @@ def dashboard_agente(request):
     en_curso = pqr_en_curso.count()
     resueltos = pqr_resueltas.count()
 
-    # Estadísticas por ciudad (solo pendientes globales y resueltos del agente)
+    # Estadísticas por ciudad (pendientes globales + resueltos del agente)
     estadisticas_ciudad = {}
     for pqr in list(pqr_pendientes) + list(pqr_resueltas):
         if pqr.propiedad:
@@ -68,6 +68,7 @@ def dashboard_agente(request):
             elif pqr.estado.nombre == "Resuelto":
                 estadisticas_ciudad[ciudad_key]["resueltos"] += 1
 
+    # Filtro por ciudad opcional
     ciudad = request.GET.get("ciudad")
     if ciudad:
         pqr_pendientes = pqr_pendientes.filter(propiedad__ciudad__icontains=ciudad)
@@ -94,7 +95,7 @@ def dashboard_tecnico(request):
     # Todas las PQR asignadas a este técnico
     pqr_asignadas = PQR.objects.filter(tecnico_asignado=request.user)
 
-    # Primeras 5 asignadas (ordenadas por fecha de creación ascendente)
+    # Primeras 5 asignadas
     primeras_asignadas = pqr_asignadas.order_by("fecha_creacion")[:5]
 
     # Últimas 5 resueltas por este técnico
@@ -115,7 +116,6 @@ def dashboard_tecnico(request):
         "resueltas": resueltas,
     }
     return render(request, "reportes/dashboard_tecnico.html", contexto)
-
 
 
 # 📋 Todas las PQR (con filtros)
