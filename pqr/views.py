@@ -210,3 +210,5 @@ def pqr_rapido(request):
     else:
         form = PQRAnonimoForm()
     return render(request, 'pqr/pqr_rapido.html', {'form': form})
+
+
